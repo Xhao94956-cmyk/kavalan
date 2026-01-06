@@ -1,0 +1,260 @@
+index.html
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+<title>KAVALAN 噶瑪蘭大富翁 — 專題展示版</title>
+<style>
+  :root{
+    --gold: #d4af37; --bg: #051411; --text: #f1f1f1;
+    --accent: #d4af37; --panel: rgba(10, 30, 25, 0.9);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  body{
+    margin:0; font-family:"Noto Sans TC", sans-serif;
+    /* 背景使用你提供的酒廠美圖 */
+    background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.8)), url('https://i.imgur.com/k6lP09L.png') no-repeat center center fixed;
+    background-size: cover; color: var(--text); overflow: hidden; height: 100vh;
+  }
+  .app{ height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding-bottom: env(safe-area-inset-bottom); }
+  
+  header{ width: 100%; max-width: 800px; display: flex; justify-content: space-between; align-items: center; padding: 15px; z-index: 10; }
+  .logo{ font-weight: 900; color: var(--gold); font-size: 1.2rem; text-shadow: 0 0 10px rgba(0,0,0,0.5); }
+  .btn-small{ background: rgba(0,0,0,0.4); border: 1px solid var(--gold); color: white; padding: 6px 12px; border-radius: 8px; font-size: 12px; margin-left: 5px; cursor: pointer;}
+
+  main{ flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; }
+  .board-wrap{ width: min(650px, 92vw); aspect-ratio: 1/1; position: relative; }
+  .board-inner{ 
+    width: 100%; height: 100%; background: var(--panel); border: 2px solid var(--gold); 
+    border-radius: 15px; position: relative; backdrop-filter: blur(10px); 
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+  }
+
+  /* 格子樣式優化 */
+  .space{
+    position:absolute; display:flex; flex-direction:column; align-items:center; justify-content:center; 
+    padding:4px; border-radius:8px; text-align:center; font-size:clamp(10px, 2.5vw, 12px);
+    border: 1px solid rgba(212, 175, 55, 0.2); background: rgba(255,255,255,0.03);
+    overflow: hidden;
+  }
+  .space .name{ font-weight: 800; color: var(--gold); margin-bottom: 2px; line-height: 1.1; }
+  .space .icon{ font-size: 1.4rem; margin-top: 2px; }
+
+  /* 棋子樣式 */
+  .player-pawn{
+    position:absolute; width:30px; height:30px; border-radius:50%; 
+    display:flex; align-items:center; justify-content:center; 
+    font-size:14px; color:#fff; font-weight:900; 
+    border:2px solid #fff; z-index:100; transition: all 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    box-shadow: 0 0 15px rgba(255,255,255,0.4);
+  }
+
+  /* 控制板 */
+  .control-panel {
+    width: 92%; max-width: 500px; background: rgba(0,0,0,0.85); 
+    padding: 12px 20px; border-radius: 20px; border: 1px solid var(--gold);
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;
+    box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
+  }
+  .dice{ background: var(--gold); color: #000; padding: 10px 18px; border-radius: 12px; font-weight: 900; font-size: 1.4rem; min-width: 55px; text-align: center; }
+  .btn-roll{ background: linear-gradient(135deg, #d4af37, #aa8a2e); color: #000; border: none; padding: 12px 25px; border-radius: 14px; font-weight: 800; font-size: 16px; cursor: pointer; }
+
+  /* 彈窗 */
+  .modal-root{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.85); z-index:1000; visibility:hidden; opacity:0; transition:0.3s; }
+  .modal-root.show{ visibility:visible; opacity:1; }
+  .modal{ background: #0a1e19; border: 2px solid var(--gold); padding: 25px; border-radius: 20px; width: 85%; max-width: 350px; text-align: center; color: white; }
+  .modal h3 { color: var(--gold); margin-top: 0; }
+  .modal button { background: var(--gold); border: none; padding: 10px 20px; border-radius: 10px; font-weight: bold; margin-top: 15px; cursor: pointer; }
+
+  .owner-bar{display:flex; gap:2px; margin-top:4px; min-height:12px; justify-content: center;}
+  .bottle{width:14px; height:14px; border-radius:4px; font-size:10px; display: flex; align-items: center; justify-content: center; color: white;}
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="logo">🥃 KAVALAN 噶瑪蘭大富翁</div>
+      <div>
+        <button id="btn-howto" class="btn-small">玩法</button>
+        <button id="btn-reset" class="btn-small">重設遊戲</button>
+      </div>
+    </header>
+
+    <main>
+      <div class="board-wrap">
+        <div class="board-inner" id="board-inner"></div>
+      </div>
+    </main>
+
+    <div class="control-panel">
+      <div id="cpTurn" style="color:var(--gold); font-weight:bold; font-size:14px; max-width: 120px;">🎯 請先點擊重設</div>
+      <div id="diceDisplay" class="dice">?</div>
+      <button id="rollBtn" class="btn-roll">🎲 擲骰子</button>
+    </div>
+
+    <div id="modal-root" class="modal-root"><div class="modal" id="modal"></div></div>
+  </div>
+
+<script>
+// --- 核心遊戲邏輯 (基於 v6.5 修改) ---
+const BOARD = [
+  { type:'start', name:'起點' },
+  { type:'property', id:'classic', name:'經典單一麥芽', price:800, rent:200 },
+  { type:'chance', name:'機會' },
+  { type:'property', id:'ex-bourbon', name:'波本桶熟成', price:1200, rent:300 },
+  { type:'hospital', name:'醫院' },
+  { type:'property', id:'sherry', name:'雪莉桶', price:1500, rent:350 },
+  { type:'property', id:'concert', name:'Concertmaster', price:1800, rent:400 },
+  { type:'property', id:'vinho', name:'葡萄酒桶', price:2500, rent:600 },
+  { type:'jail', name:'監獄' },
+  { type:'property', id:'peaty', name:'泥煤桶', price:2200, rent:500 },
+  { type:'destiny', name:'命運' },
+  { type:'property', id:'oloroso', name:'Oloroso 雪莉', price:2800, rent:650 },
+  { type:'parking', name:'停車場' },
+  { type:'property', id:'solist', name:'Solist 系列', price:3000, rent:700 },
+  { type:'property', id:'limited', name:'限量款', price:3200, rent:750 },
+  { type:'chance', name:'機會' }
+];
+
+const GRID = [[0,0],[0,1],[0,2],[0,3],[0,4],[1,4],[2,4],[3,4],[4,4],[4,3],[4,2],[4,1],[4,0],[3,0],[2,0],[1,0]];
+const PLAYER_COLORS = ['#ef4444','#3b82f6','#22c55e','#f97316','#8b5cf6','#f43f5e'];
+let state = { board: BOARD.map(s=>({...s, ownerId:null, level:0})), players:[], current:0, moving:false };
+
+const modalRoot = document.getElementById('modal-root');
+const modal = document.getElementById('modal');
+
+function openModal(html){ modal.innerHTML = html; modalRoot.classList.add('show'); }
+function closeModal(){ modalRoot.classList.remove('show'); }
+
+function layoutBoard(){
+  const board = document.getElementById('board-inner');
+  board.innerHTML = '';
+  const cellW = board.clientWidth / 5;
+  
+  state.board.forEach((s, i) => {
+    const [r, c] = GRID[i];
+    const el = document.createElement('div');
+    el.className = 'space';
+    el.style.width = cellW + 'px'; el.style.height = cellW + 'px';
+    el.style.left = (c * cellW) + 'px'; el.style.top = (r * cellW) + 'px';
+    el.innerHTML = `<div class="name">${s.name}</div><div class="icon">${getIcon(s.type)}</div><div class="owner-bar" id="owner-${i}"></div>`;
+    board.appendChild(el);
+  });
+  
+  state.players.forEach(p => {
+    const pawn = document.createElement('div');
+    pawn.className = 'player-pawn'; pawn.id = `pawn-${p.id}`;
+    pawn.style.background = PLAYER_COLORS[p.id]; pawn.innerText = p.id+1;
+    board.appendChild(pawn);
+  });
+  updatePawns();
+}
+
+function getIcon(type){ 
+  if(type==='start') return '🏁'; if(type==='chance') return '❓'; 
+  if(type==='hospital') return '🏥'; if(type==='jail') return '🚔'; 
+  if(type==='destiny') return '🔮'; if(type==='parking') return '🅿️';
+  return '🥃'; 
+}
+
+function updatePawns(){
+  const board = document.getElementById('board-inner');
+  if(!board || state.players.length === 0) return;
+  const cellW = board.clientWidth / 5;
+  
+  state.players.forEach(p => {
+    const pawn = document.getElementById(`pawn-${p.id}`);
+    if(!pawn) return;
+    const [r, c] = GRID[p.position];
+    pawn.style.left = (c * cellW + (cellW/2) - 15) + 'px';
+    pawn.style.top = (r * cellW + (cellW/2) - 15) + 'px';
+  });
+  const cur = state.players[state.current];
+  if(cur) document.getElementById('cpTurn').innerText = `🎯 ${cur.name}\n💰 $${cur.money}`;
+}
+
+document.getElementById('rollBtn').onclick = async () => {
+  if(state.moving || state.players.length === 0) return;
+  state.moving = true;
+  let dice = Math.floor(Math.random()*6)+1;
+  document.getElementById('diceDisplay').innerText = dice;
+  
+  const p = state.players[state.current];
+  for(let i=0; i<dice; i++){
+    p.position = (p.position + 1) % 16;
+    updatePawns();
+    await new Promise(r => setTimeout(r, 200));
+    if(p.position === 0) {
+        p.money += 2000;
+        openModal(`<h3>經過起點</h3><p>獲得行銷補助 $2000</p><button onclick="closeModal()">確定</button>`);
+    }
+  }
+  state.moving = false;
+  handleLand(p);
+};
+
+function handleLand(p){
+  const s = state.board[p.position];
+  if(s.type === 'property'){
+    if(s.ownerId === null){
+      openModal(`<h3>${s.name}</h3><p>價格：$${s.price}</p><p>是否購買經營權？</p>
+        <button onclick="buyProperty(${p.id}, ${p.position})">購買</button>
+        <button style="background:#555; margin-left:10px;" onclick="nextTurn()">放棄</button>`);
+    } else if(s.ownerId !== p.id){
+      const rent = s.rent;
+      p.money -= rent;
+      state.players[s.ownerId].money += rent;
+      openModal(`<h3>支付費用</h3><p>停在 ${state.players[s.ownerId].name} 的領地</p><p>支付 $${rent}</p><button onclick="nextTurn()">確定</button>`);
+    } else {
+      nextTurn();
+    }
+  } else if(s.type === 'chance' || s.type === 'destiny'){
+    const gain = (Math.floor(Math.random()*21)-10)*100;
+    p.money += gain;
+    openModal(`<h3>${s.name}</h3><p>${gain >= 0 ? '獲得' : '支出'} $${Math.abs(gain)}</p><button onclick="nextTurn()">確定</button>`);
+  } else {
+    nextTurn();
+  }
+}
+
+window.buyProperty = (pid, pos) => {
+  const p = state.players[pid];
+  const s = state.board[pos];
+  if(p.money >= s.price){
+    p.money -= s.price;
+    s.ownerId = pid;
+    s.level = 1;
+    const bar = document.getElementById(`owner-${pos}`);
+    bar.innerHTML = `<div class="bottle" style="background:${PLAYER_COLORS[pid]}">🍾</div>`;
+    closeModal();
+    nextTurn();
+  } else {
+    alert("預算不足！");
+  }
+};
+
+window.nextTurn = () => {
+  closeModal();
+  state.current = (state.current + 1) % state.players.length;
+  updatePawns();
+};
+
+document.getElementById('btn-reset').onclick = () => {
+  const n = prompt("請輸入經銷商(玩家)人數 (2-6)", "4");
+  if(!n || n < 2 || n > 6) return;
+  state.players = Array.from({length: parseInt(n)}, (_, i) => ({id: i, name: `經銷商${i+1}`, money: 10000, position: 0}));
+  state.board.forEach(s => { s.ownerId = null; s.level = 0; });
+  layoutBoard();
+  document.getElementById('cpTurn').innerText = "🎯 準備開始";
+};
+
+document.getElementById('btn-howto').onclick = () => {
+    openModal(`<h3>遊戲玩法</h3><p>1. 擲骰子移動<br>2. 購買酒款經營權<br>3. 經過起點領補助<br>4. 資金歸零則淘汰</p><button onclick="closeModal()">開始經營</button>`);
+};
+
+window.onresize = layoutBoard;
+layoutBoard();
+</script>
+</body>
+</html>
